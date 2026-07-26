@@ -4,6 +4,5 @@ include:
   # battery/bootloader, not the matrix. nice_nano_v2 is the safe default.
   - board: nice_nano_v2
     shield: corne_custom_left
-  # right half not wired yet — uncomment when built:
-  # - board: nice_nano_v2
-  #   shield: corne_custom_right
+  - board: nice_nano_v2
+    shield: corne_custom_right
