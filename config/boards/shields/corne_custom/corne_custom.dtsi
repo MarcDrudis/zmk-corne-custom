@@ -53,3 +53,12 @@ RC(2,0) RC(2,1) RC(2,2) RC(2,3) RC(2,4) RC(2,5)   RC(2,11) RC(2,10) RC(2,9) RC(2
 		/* diode-direction + gpios set per-half in the .overlay files */
 	};
 };
+
+/*
+ * P0.09 / P0.10 are the nRF52840 NFC antenna pins by default. Rows are wired
+ * to them (left 009+010, right 010), so free them for GPIO. On Zephyr 3.5
+ * (ZMK v0.3) this is a devicetree property on UICR, not a Kconfig symbol.
+ */
+&uicr {
+	nfct-pins-as-gpios;
+};
