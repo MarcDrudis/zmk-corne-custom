@@ -1,0 +1,11 @@
+file_format: "1"
+id: corne_custom
+name: Corne Custom (hand-wired, 5-col)
+type: shield
+url: ""
+requires: [pro_micro]
+features:
+  - keys
+siblings:
+  - corne_custom_left
+  - corne_custom_right

@@ -1,0 +1,30 @@
+#include "corne_custom.dtsi"
+
+/*
+ * RIGHT HALF — NOT YET WIRED.
+ * Placeholder mirrors the left pinout; update these &gpioN pins to match
+ * your actual right-hand soldering before flashing the right side.
+ * col-offset = <5> maps this half's local cols 0-4 to transform cols 5-9.
+ */
+
+&default_transform {
+	col-offset = <5>;
+};
+
+&kscan0 {
+	diode-direction = "col2row";
+
+	row-gpios
+		= <&gpio0 2  (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+		, <&gpio0 10 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+		, <&gpio0 9  (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+		, <&gpio1 0  (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+		;
+	col-gpios
+		= <&gpio1 15 GPIO_ACTIVE_HIGH>
+		, <&gpio1 13 GPIO_ACTIVE_HIGH>
+		, <&gpio1 4  GPIO_ACTIVE_HIGH>
+		, <&gpio1 6  GPIO_ACTIVE_HIGH>
+		, <&gpio0 11 GPIO_ACTIVE_HIGH>
+		;
+};

@@ -1,0 +1,46 @@
+#include "corne_custom.dtsi"
+
+/*
+ * Diode direction — you weren't sure which way you soldered.
+ *   col2row (default): cols drive, rows sense.  <- try this first
+ *   row2col:           rows drive, cols sense.
+ * If the keyboard scans nothing / everything, flip BOTH the
+ * diode-direction string and swap which list is row-gpios vs col-gpios.
+ * The two blocks below are complete; comment one out, uncomment the other.
+ */
+
+&kscan0 {
+	/* ---- col2row (DEFAULT) ---- */
+	diode-direction = "col2row";
+
+	row-gpios
+		= <&gpio0 2  (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>	/* qwert */
+		, <&gpio0 10 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>	/* asdfg */
+		, <&gpio0 9  (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>	/* zxcvb */
+		, <&gpio1 0  (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>	/* thumbs */
+		;
+	col-gpios
+		= <&gpio1 15 GPIO_ACTIVE_HIGH>	/* qaz */
+		, <&gpio1 13 GPIO_ACTIVE_HIGH>	/* wsx */
+		, <&gpio1 4  GPIO_ACTIVE_HIGH>	/* edc / thumb2 */
+		, <&gpio1 6  GPIO_ACTIVE_HIGH>	/* rfv / thumb1 */
+		, <&gpio0 11 GPIO_ACTIVE_HIGH>	/* tgb / thumb0 */
+		;
+
+	/* ---- row2col (ALTERNATE) — swap pull to the sense side ----
+	diode-direction = "row2col";
+	col-gpios
+		= <&gpio1 15 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+		, <&gpio1 13 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+		, <&gpio1 4  (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+		, <&gpio1 6  (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+		, <&gpio0 11 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+		;
+	row-gpios
+		= <&gpio0 2  GPIO_ACTIVE_HIGH>
+		, <&gpio0 10 GPIO_ACTIVE_HIGH>
+		, <&gpio0 9  GPIO_ACTIVE_HIGH>
+		, <&gpio1 0  GPIO_ACTIVE_HIGH>
+		;
+	*/
+};

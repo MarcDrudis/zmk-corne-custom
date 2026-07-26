@@ -1,0 +1,9 @@
+include:
+  # SuperMini nRF52840 is nice!nano pin-compatible; we reference raw
+  # &gpioN pins in the overlay so the board choice only affects LED/
+  # battery/bootloader, not the matrix. nice_nano_v2 is the safe default.
+  - board: nice_nano_v2
+    shield: corne_custom_left
+  # right half not wired yet — uncomment when built:
+  # - board: nice_nano_v2
+  #   shield: corne_custom_right
