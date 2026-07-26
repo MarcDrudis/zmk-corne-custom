@@ -20,7 +20,8 @@
 		, <&gpio1 0  (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>	/* thumbs */
 		;
 	col-gpios
-		= <&gpio1 15 GPIO_ACTIVE_HIGH>	/* qaz */
+		= <&gpio0 22 GPIO_ACTIVE_HIGH>	/* outer pinky (6th col) */
+		, <&gpio1 15 GPIO_ACTIVE_HIGH>	/* qaz */
 		, <&gpio1 13 GPIO_ACTIVE_HIGH>	/* wsx */
 		, <&gpio1 4  GPIO_ACTIVE_HIGH>	/* edc / thumb2 */
 		, <&gpio1 6  GPIO_ACTIVE_HIGH>	/* rfv / thumb1 */
@@ -30,7 +31,8 @@
 	/* ---- row2col (ALTERNATE) — swap pull to the sense side ----
 	diode-direction = "row2col";
 	col-gpios
-		= <&gpio1 15 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+		= <&gpio0 22 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
+		, <&gpio1 15 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
 		, <&gpio1 13 (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
 		, <&gpio1 4  (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
 		, <&gpio1 6  (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>

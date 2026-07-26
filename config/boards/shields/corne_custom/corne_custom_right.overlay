@@ -4,11 +4,11 @@
  * RIGHT HALF — NOT YET WIRED.
  * Placeholder mirrors the left pinout; update these &gpioN pins to match
  * your actual right-hand soldering before flashing the right side.
- * col-offset = <5> maps this half's local cols 0-4 to transform cols 5-9.
+ * col-offset = <6> maps this half's local cols 0-5 to transform cols 6-11.
  */
 
 &default_transform {
-	col-offset = <5>;
+	col-offset = <6>;
 };
 
 &kscan0 {
@@ -21,7 +21,8 @@
 		, <&gpio1 0  (GPIO_ACTIVE_HIGH | GPIO_PULL_DOWN)>
 		;
 	col-gpios
-		= <&gpio1 15 GPIO_ACTIVE_HIGH>
+		= <&gpio0 22 GPIO_ACTIVE_HIGH>
+		, <&gpio1 15 GPIO_ACTIVE_HIGH>
 		, <&gpio1 13 GPIO_ACTIVE_HIGH>
 		, <&gpio1 4  GPIO_ACTIVE_HIGH>
 		, <&gpio1 6  GPIO_ACTIVE_HIGH>
