@@ -1,139 +1,233 @@
-#include <behaviors.dtsi>
-#include <dt-bindings/zmk/keys.h>
-#include <dt-bindings/zmk/bt.h>
-#include <dt-bindings/zmk/pointing.h>
-
 /*
- * Miryoku for 6-col Corne (manna-harbour spec, QWERTY).
- * Only the inner 5 columns + 3 thumbs per half are used; the outer 6th
- * column is &none so it behaves like a 5-col Miryoku board.
+ * Miryoku for 6-col Corne (42 keys), QWERTY — faithful to the user's fork
+ * github.com/MarcDrudis/miryoku_zmk (miryoku/custom_config.h), which is stock
+ * manna-harbour Miryoku ZMK plus: QWERTY alphas, right pinky ' (SQT), a Game
+ * layer, MIRYOKU_NAV_VI. Here EXTRA is dropped and layers are renumbered:
  *
- * Home-row mods (GACS), positional hold-tap to avoid misfires:
- *   left  A=GUI S=ALT D=CTRL F=SHFT      right  J=SHFT K=CTRL L=ALT ;=GUI
- * Thumbs (layer-taps), outer->inner:
- *   left  MEDIA/ESC  NAV/SPACE  MOUSE/TAB
- *   right SYM/RET     NUM/BSPC   FUN/DEL
+ *   0 BASE  1 GAME  2 BUTTON  3 NAV  4 MOUSE  5 MEDIA  6 NUM  7 SYM  8 FUN
  *
- * Layers: 0 BASE 1 NAV 2 MOUSE 3 MEDIA 4 NUM 5 SYM 6 FUN
+ * Behaviors are stock: u_mt (mod-tap) / u_lt (layer-tap), tap-preferred, 200ms,
+ * NO positional hold-trigger. Supporting behaviors (tap-dance layer switches,
+ * shift mod-morphs, mouse accel) mirror the upstream .dtsi files.
  *
- * Per-half position map:
- *   0  1  2  3  4  5
- *   6  7  8  9 10 11
- *  12 13 14 15 16 17
- *        18 19 20      (thumbs)
+ * The keymap is plain: the outer 6th column is &none on every Miryoku layer;
+ * the Game layer uses the LEFT outer column for TAB/LSHFT/LCTRL. The physical
+ * right-half column reversal lives in the transform, not here.
+ *
+ * Position map (12-col transform; right half reversed in the transform):
+ *   [0]  Q W E R T  |  Y U I O P  [11]
+ *   [12] A S D F G  |  H J K L '  [23]
+ *   [24] Z X C V B  |  N M , . /  [35]
+ *            36 37 38 | 39 40 41
  */
 
-#define BASE  0
-#define NAV   1
-#define MOUSE 2
-#define MEDIA 3
-#define NUM   4
-#define SYM   5
-#define FUN   6
+#include <behaviors.dtsi>
+#include <behaviors/mouse_keys.dtsi>
+#include <dt-bindings/zmk/keys.h>
+#include <dt-bindings/zmk/bt.h>
+#include <dt-bindings/zmk/outputs.h>
+#include <dt-bindings/zmk/ext_power.h>
+#include <dt-bindings/zmk/rgb.h>
+#include <dt-bindings/zmk/pointing.h>
+
+/* ---- layer indices ---- */
+#define BASE   0
+#define GAME   1
+#define BUTTON 2
+#define NAV    3
+#define MOUSE  4
+#define MEDIA  5
+#define NUM    6
+#define SYM    7
+#define FUN    8
+
+/* ---- Miryoku macro expansions (default branches) ---- */
+/* clipboard (default, INS-based) */
+#define U_RDO &kp K_AGAIN
+#define U_PST &kp LS(INS)
+#define U_CPY &kp LC(INS)
+#define U_CUT &kp LS(DEL)
+#define U_UND &kp K_UNDO
+/* mouse buttons / move / wheel */
+#define U_BTN1 &mkp MB1
+#define U_BTN2 &mkp MB2
+#define U_BTN3 &mkp MB3
+#define U_MS_U &mmv MOVE_UP
+#define U_MS_D &mmv MOVE_DOWN
+#define U_MS_L &mmv MOVE_LEFT
+#define U_MS_R &mmv MOVE_RIGHT
+#define U_WH_U &msc SCRL_UP
+#define U_WH_D &msc SCRL_DOWN
+#define U_WH_L &msc SCRL_LEFT
+#define U_WH_R &msc SCRL_RIGHT
+/* RGB / ext-power (no-ops on this board: no underglow wired, but stock-faithful) */
+#define U_RGB_TOG &rgb_ug RGB_TOG
+#define U_RGB_EFF &rgb_ug RGB_EFF
+#define U_RGB_HUI &rgb_ug RGB_HUI
+#define U_RGB_SAI &rgb_ug RGB_SAI
+#define U_RGB_BRI &rgb_ug RGB_BRI
+#define U_EP_TOG &ext_power EP_TOG
+
+/* mouse accel tuning (miryoku_mousekeys.dtsi) */
+#define U_MOUSE_MOVE_EXPONENT 1
+#define U_MOUSE_MOVE_TIME 1500
+#define U_MOUSE_MOVE_DELAY 0
+
+/* &msc override is commented out upstream, so only &mmv is applied */
+&mmv {
+	acceleration-exponent = <U_MOUSE_MOVE_EXPONENT>;
+	time-to-max-speed-ms = <U_MOUSE_MOVE_TIME>;
+	delay-ms = <U_MOUSE_MOVE_DELAY>;
+};
 
 / {
 	behaviors {
-		// Positional hold-tap for home-row mods: only holds if the next
-		// key is on the OPPOSITE hand (Miryoku's bilateral rule).
-		hml: home_row_mod_left {
+		/* stock Miryoku hold-taps: tap-preferred, single 200ms term */
+		u_mt: u_mt {
 			compatible = "zmk,behavior-hold-tap";
 			#binding-cells = <2>;
-			flavor = "balanced";
 			tapping-term-ms = <200>;
-			quick-tap-ms = <175>;
-			require-prior-idle-ms = <150>;
+			flavor = "tap-preferred";
 			bindings = <&kp>, <&kp>;
-			// opposite (right) hand: row0 6-11, row1 18-23, row2 30-35, thumbs 39-41
-			hold-trigger-key-positions = <
-				 6  7  8  9 10 11
-				18 19 20 21 22 23
-				30 31 32 33 34 35
-				39 40 41
-			>;
-			hold-trigger-on-release;
 		};
-		hmr: home_row_mod_right {
+		u_lt: u_lt {
 			compatible = "zmk,behavior-hold-tap";
 			#binding-cells = <2>;
-			flavor = "balanced";
 			tapping-term-ms = <200>;
-			quick-tap-ms = <175>;
-			require-prior-idle-ms = <150>;
-			bindings = <&kp>, <&kp>;
-			// opposite (left) hand: row0 0-5, row1 12-17, row2 24-29, thumbs 36-38
-			hold-trigger-key-positions = <
-				 0  1  2  3  4  5
-				12 13 14 15 16 17
-				24 25 26 27 28 29
-				36 37 38
-			>;
-			hold-trigger-on-release;
+			flavor = "tap-preferred";
+			bindings = <&mo>, <&kp>;
 		};
+
+		/* double-tap guarded "switch to layer" tap-dances (miryoku_double_tap_guard.dtsi) */
+		u_to_U_BASE:   u_to_U_BASE   { compatible = "zmk,behavior-tap-dance"; #binding-cells = <0>; tapping-term-ms = <200>; bindings = <&none>, <&to BASE>; };
+		u_to_U_GAME:   u_to_U_GAME   { compatible = "zmk,behavior-tap-dance"; #binding-cells = <0>; tapping-term-ms = <200>; bindings = <&none>, <&to GAME>; };
+		u_to_U_BUTTON: u_to_U_BUTTON { compatible = "zmk,behavior-tap-dance"; #binding-cells = <0>; tapping-term-ms = <200>; bindings = <&none>, <&to BUTTON>; };
+		u_to_U_NAV:    u_to_U_NAV    { compatible = "zmk,behavior-tap-dance"; #binding-cells = <0>; tapping-term-ms = <200>; bindings = <&none>, <&to NAV>; };
+		u_to_U_MOUSE:  u_to_U_MOUSE  { compatible = "zmk,behavior-tap-dance"; #binding-cells = <0>; tapping-term-ms = <200>; bindings = <&none>, <&to MOUSE>; };
+		u_to_U_MEDIA:  u_to_U_MEDIA  { compatible = "zmk,behavior-tap-dance"; #binding-cells = <0>; tapping-term-ms = <200>; bindings = <&none>, <&to MEDIA>; };
+		u_to_U_NUM:    u_to_U_NUM    { compatible = "zmk,behavior-tap-dance"; #binding-cells = <0>; tapping-term-ms = <200>; bindings = <&none>, <&to NUM>; };
+		u_to_U_SYM:    u_to_U_SYM    { compatible = "zmk,behavior-tap-dance"; #binding-cells = <0>; tapping-term-ms = <200>; bindings = <&none>, <&to SYM>; };
+		u_to_U_FUN:    u_to_U_FUN    { compatible = "zmk,behavior-tap-dance"; #binding-cells = <0>; tapping-term-ms = <200>; bindings = <&none>, <&to FUN>; };
+
+		/* shift mod-morphs (miryoku_shift_functions.dtsi) */
+		u_caps_word: u_caps_word { compatible = "zmk,behavior-mod-morph"; #binding-cells = <0>; bindings = <&caps_word>, <&kp CAPS>; mods = <(MOD_LSFT|MOD_RSFT)>; };
+		u_out_tog:   u_out_tog   { compatible = "zmk,behavior-mod-morph"; #binding-cells = <0>; bindings = <&out OUT_TOG>, <&out OUT_USB>; mods = <(MOD_LSFT|MOD_RSFT)>; };
+		u_bt_sel_0: u_bt_sel_0 { compatible = "zmk,behavior-mod-morph"; #binding-cells = <0>; bindings = <&bt BT_SEL 0>, <&u_macro_bt_0>; mods = <(MOD_LSFT|MOD_RSFT)>; };
+		u_bt_sel_1: u_bt_sel_1 { compatible = "zmk,behavior-mod-morph"; #binding-cells = <0>; bindings = <&bt BT_SEL 1>, <&u_macro_bt_1>; mods = <(MOD_LSFT|MOD_RSFT)>; };
+		u_bt_sel_2: u_bt_sel_2 { compatible = "zmk,behavior-mod-morph"; #binding-cells = <0>; bindings = <&bt BT_SEL 2>, <&u_macro_bt_2>; mods = <(MOD_LSFT|MOD_RSFT)>; };
+		u_bt_sel_3: u_bt_sel_3 { compatible = "zmk,behavior-mod-morph"; #binding-cells = <0>; bindings = <&bt BT_SEL 3>, <&u_macro_bt_3>; mods = <(MOD_LSFT|MOD_RSFT)>; };
+	};
+
+	/* shift+bt_sel clears that profile's bond, per Miryoku */
+	macros {
+		u_macro_bt_0: u_macro_bt_0 { compatible = "zmk,behavior-macro"; #binding-cells = <0>; wait-ms = <0>; bindings = <&bt BT_SEL 0 &bt BT_CLR>; };
+		u_macro_bt_1: u_macro_bt_1 { compatible = "zmk,behavior-macro"; #binding-cells = <0>; wait-ms = <0>; bindings = <&bt BT_SEL 1 &bt BT_CLR>; };
+		u_macro_bt_2: u_macro_bt_2 { compatible = "zmk,behavior-macro"; #binding-cells = <0>; wait-ms = <0>; bindings = <&bt BT_SEL 2 &bt BT_CLR>; };
+		u_macro_bt_3: u_macro_bt_3 { compatible = "zmk,behavior-macro"; #binding-cells = <0>; wait-ms = <0>; bindings = <&bt BT_SEL 3 &bt BT_CLR>; };
 	};
 
 	keymap {
 		compatible = "zmk,keymap";
 
 		base {
+			display-name = "Base";
 			bindings = <
-&none &kp Q       &kp W       &kp E        &kp R        &kp T          &kp Y &kp U        &kp I        &kp O       &kp P          &none
-&none &hml LGUI A &hml LALT S &hml LCTRL D &hml LSHFT F &kp G          &kp H &hmr LSHFT J &hmr LCTRL K &hmr LALT L &hmr LGUI SEMI &none
-&none &kp Z       &kp X       &kp C        &kp V        &kp B          &kp N &kp M        &kp COMMA    &kp DOT     &kp FSLH       &none
-              &lt MEDIA ESC &lt NAV SPACE &lt MOUSE TAB    &lt SYM RET &lt NUM BSPC &lt FUN DEL
+&none  &kp Q           &kp W          &kp E           &kp R           &kp T            &kp Y  &kp U           &kp I           &kp O          &kp SQT              &none
+&none  &u_mt LGUI A    &u_mt LALT S   &u_mt LCTRL D   &u_mt LSHFT F   &kp G            &kp H  &u_mt LSHFT J   &u_mt LCTRL K   &u_mt LALT L   &u_mt LGUI SQT      &none
+&none  &u_lt BUTTON Z  &u_mt RALT X   &kp C           &kp V           &kp B            &kp N  &kp M           &kp COMMA       &u_mt RALT DOT &u_lt BUTTON SLASH  &none
+                                      &u_lt MEDIA ESC &u_lt NAV SPACE &u_lt MOUSE TAB  &u_lt SYM RET &u_lt NUM BSPC &u_lt FUN DEL
+			>;
+		};
+
+		game {
+			display-name = "Game";
+			/*
+			 * Letters stay in their BASE typing positions (no shift). Left
+			 * home-row mods removed (plain &kp). The free LEFT outer column
+			 * carries TAB/LSHFT/LCTRL. Left thumbs plain. Right hand + right
+			 * thumbs keep full Miryoku so layer access (and &tog GAME to exit)
+			 * still works.
+			 */
+			bindings = <
+&kp TAB    &kp Q  &kp W  &kp E    &kp R      &kp T          &kp Y  &kp U          &kp I          &kp O          &kp SQT             &none
+&kp LSHFT  &kp A  &kp S  &kp D    &kp F      &kp G          &kp H  &u_mt LSHFT J  &u_mt LCTRL K  &u_mt LALT L   &u_mt LGUI SQT      &none
+&kp LCTRL  &kp Z  &kp X  &kp C    &kp V      &kp B          &kp N  &kp M          &kp COMMA      &u_mt RALT DOT &u_lt BUTTON SLASH  &none
+                         &kp ESC  &kp SPACE  &kp TAB        &u_lt SYM RET &u_lt NUM BSPC &u_lt FUN DEL
+			>;
+		};
+
+		button {
+			display-name = "Button";
+			bindings = <
+&none  U_UND       U_CUT       U_CPY       U_PST       U_RDO        U_RDO       U_PST       U_CPY       U_CUT       U_UND       &none
+&none  &kp LGUI    &kp LALT    &kp LCTRL   &kp LSHFT   &none        &none       &kp LSHFT   &kp LCTRL   &kp LALT    &kp LGUI    &none
+&none  U_UND       U_CUT       U_CPY       U_PST       U_RDO        U_RDO       U_PST       U_CPY       U_CUT       U_UND       &none
+                               U_BTN3      U_BTN1      U_BTN2       U_BTN2      U_BTN1      U_BTN3
 			>;
 		};
 
 		nav {
+			display-name = "Nav";
 			bindings = <
-&none &kp LG(TAB) &kp LC(F4) &none &none &none            &kp LC(Z) &kp LC(Y) &kp LC(V) &kp LC(C) &kp LC(X) &none
-&none &kp LGUI    &kp LALT   &kp LCTRL &kp LSHFT &none    &caps_word &kp LEFT &kp DOWN &kp UP &kp RIGHT &none
-&none &none &none &none &none &none                       &kp INS &kp HOME &kp PG_DN &kp PG_UP &kp END &none
-                      &trans &trans &trans                &kp RET &kp BSPC &kp DEL
+&none  &bootloader  &none       &none          &u_to_U_BASE  &none        U_RDO      U_PST      U_CPY      U_CUT      U_UND         &none
+&none  &kp LGUI     &kp LALT    &kp LCTRL      &kp LSHFT     &none        &kp LEFT   &kp DOWN   &kp UP     &kp RIGHT  &u_caps_word  &none
+&none  &none        &kp RALT    &u_to_U_NUM    &u_to_U_NAV   &none        &kp HOME   &kp PG_DN  &kp PG_UP  &kp END    &kp INS       &none
+                                &none          &none         &none        &kp RET    &kp BSPC   &kp DEL
 			>;
 		};
 
 		mouse {
+			display-name = "Mouse";
 			bindings = <
-&none &kp LG(TAB) &kp LC(F4) &none &none &none            &kp LC(Z) &kp LC(Y) &kp LC(V) &kp LC(C) &kp LC(X) &none
-&none &kp LGUI    &kp LALT   &kp LCTRL &kp LSHFT &none    &none &mkp MB1 &mkp MB3 &mkp MB2 &none &none
-&none &none &none &none &none &none                       &none &none &none &none &none &none
-                      &trans &trans &trans                &mkp MB1 &mkp MB3 &mkp MB2
+&none  &bootloader  &none       &none         &u_to_U_BASE   &none        U_RDO   U_PST   U_CPY   U_CUT   U_UND    &none
+&none  &kp LGUI     &kp LALT    &kp LCTRL     &kp LSHFT      &none        U_MS_L  U_MS_D  U_MS_U  U_MS_R  &none    &none
+&none  &none        &kp RALT    &u_to_U_SYM   &u_to_U_MOUSE  &none        U_WH_L  U_WH_D  U_WH_U  U_WH_R  &none    &none
+                                &none         &none          &none        U_BTN2  U_BTN1  U_BTN3
 			>;
 		};
 
 		media {
+			display-name = "Media";
+			/*
+			 * Fork MEDIA, with two changes: volume laid vim-vertical (VOL_DN
+			 * on the DOWN column, VOL_UP on the UP column, matching NAV's j/k),
+			 * and &tog GAME on the free left-middle U_NA slot to enter/leave Game.
+			 */
 			bindings = <
-&none &kp LG(TAB) &kp LC(F4) &none &none &none            &none &none &none &none &none &none
-&none &kp LGUI    &kp LALT   &kp LCTRL &kp LSHFT &none    &none &kp C_PREV &kp C_VOL_DN &kp C_VOL_UP &kp C_NEXT &none
-&none &none &none &none &none &none                       &none &none &none &none &none &none
-                      &trans &trans &trans                &kp C_STOP &kp C_PP &kp C_MUTE
+&none  &bootloader  &none         &none         &u_to_U_BASE   &none        U_RGB_EFF     U_RGB_HUI     U_RGB_SAI     U_RGB_BRI     &ext_power EP_TOG  &none
+&none  &kp LGUI     &kp LALT      &kp LCTRL     &kp LSHFT      &none        &kp C_PREV    &kp C_VOL_DN  &kp C_VOL_UP  &kp C_NEXT    U_EP_TOG          &none
+&none  &tog GAME    &kp RALT      &u_to_U_FUN   &u_to_U_MEDIA  &none        &u_bt_sel_0   &u_bt_sel_1   &u_bt_sel_2   &u_bt_sel_3   &u_out_tog        &none
+                                  &none         &none          &none        &kp C_STOP    &kp C_PP      &kp C_MUTE
 			>;
 		};
 
 		num {
+			display-name = "Num";
 			bindings = <
-&none &kp LBKT &kp N7 &kp N8 &kp N9 &kp RBKT             &none &none &none &none &none &none
-&none &kp SEMI &kp N4 &kp N5 &kp N6 &kp EQUAL            &none &kp RSHFT &kp RCTRL &kp RALT &kp RGUI &none
-&none &kp GRAVE &kp N1 &kp N2 &kp N3 &kp BSLH            &none &none &none &none &none &none
-                      &kp DOT &kp N0 &kp MINUS           &trans &trans &trans
+&none  &kp LBKT   &kp N7   &kp N8   &kp N9   &kp RBKT      &none  &u_to_U_BASE  &none        &none        &bootloader  &none
+&none  &kp SEMI   &kp N4   &kp N5   &kp N6   &kp EQUAL     &none  &kp LSHFT     &kp LCTRL    &kp LALT     &kp LGUI     &none
+&none  &kp GRAVE  &kp N1   &kp N2   &kp N3   &kp BSLH      &none  &u_to_U_NUM   &u_to_U_NAV  &kp RALT     &none        &none
+                           &kp DOT  &kp N0   &kp MINUS     &none  &none         &none
 			>;
 		};
 
 		sym {
+			display-name = "Sym";
 			bindings = <
-&none &kp LBRC &kp AMPS &kp STAR &kp LPAR &kp RBRC       &none &none &none &none &none &none
-&none &kp COLON &kp DLLR &kp PRCNT &kp CARET &kp PLUS    &none &kp RSHFT &kp RCTRL &kp RALT &kp RGUI &none
-&none &kp TILDE &kp EXCL &kp AT &kp HASH &kp PIPE        &none &none &none &none &none &none
-                      &kp LPAR &kp RPAR &kp UNDER        &trans &trans &trans
+&none  &kp LBRC   &kp AMPS  &kp ASTRK  &kp LPAR  &kp RBRC      &none  &u_to_U_BASE  &none          &none      &bootloader  &none
+&none  &kp COLON  &kp DLLR  &kp PRCNT  &kp CARET &kp PLUS      &none  &kp LSHFT     &kp LCTRL      &kp LALT   &kp LGUI     &none
+&none  &kp TILDE  &kp EXCL  &kp AT     &kp HASH  &kp PIPE      &none  &u_to_U_SYM   &u_to_U_MOUSE  &kp RALT   &none        &none
+                            &kp LPAR   &kp RPAR  &kp UNDER     &none  &none         &none
 			>;
 		};
 
 		fun {
+			display-name = "Fun";
 			bindings = <
-&none &kp F12 &kp F7 &kp F8 &kp F9 &kp PSCRN             &none &none &none &none &none &none
-&none &kp F11 &kp F4 &kp F5 &kp F6 &kp SLCK             &none &kp RSHFT &kp RCTRL &kp RALT &kp RGUI &none
-&none &kp F10 &kp F1 &kp F2 &kp F3 &kp PAUSE_BREAK      &none &none &none &none &none &none
-                      &kp K_APP &kp SPACE &kp TAB       &trans &trans &trans
+&none  &kp F12  &kp F7  &kp F8  &kp F9  &kp PSCRN         &none  &u_to_U_BASE  &none          &none      &bootloader  &none
+&none  &kp F11  &kp F4  &kp F5  &kp F6  &kp SLCK          &none  &kp LSHFT     &kp LCTRL      &kp LALT   &kp LGUI     &none
+&none  &kp F10  &kp F1  &kp F2  &kp F3  &kp PAUSE_BREAK   &none  &u_to_U_FUN   &u_to_U_MEDIA  &kp RALT   &none        &none
+                        &kp K_APP  &kp SPACE  &kp TAB     &none  &none         &none
 			>;
 		};
 	};
