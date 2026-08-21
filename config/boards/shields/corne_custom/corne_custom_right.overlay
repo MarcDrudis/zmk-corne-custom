@@ -30,7 +30,7 @@
 		, <&gpio1 11 GPIO_ACTIVE_HIGH>	/* col3 o l . */
 		, <&gpio0 11 GPIO_ACTIVE_HIGH>	/* col4 i k , (thumb2) */
 		, <&gpio1 13 GPIO_ACTIVE_HIGH>	/* col5 u j m (thumb1) */
-		, <&gpio1 15 GPIO_ACTIVE_HIGH>	/* col6 y h n (thumb0) */
+		, <&gpio0 2  GPIO_ACTIVE_HIGH>	/* col6 y h n (thumb0) = 002 */
 		;
 
 	/* ---- row2col (ALTERNATE) — uncomment this + comment the block above ----
