@@ -96,6 +96,8 @@ def render_binding(tok):
         return (f"→{parts[1]}", "", "tog")
     if head.startswith("&u_to_U_"):
         return ("→" + head[len("&u_to_U_"):], "", "tog")
+    if head == "&studio_unlock":
+        return ("STUDIO", "unlock", "tog")
     if head == "&u_caps_word":
         return ("CAPS", "", "")
     if head == "&u_out_tog":
