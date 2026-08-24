@@ -1,299 +1,351 @@
 #!/usr/bin/env python3
 """
-Generate visual keyboard layouts from ZMK keymap files.
-Outputs SVG diagrams for each layer showing all key bindings.
+Render a keyboard-layout PNG straight from config/corne_custom.keymap.
+
+For every layer it draws the 6-column split Corne, and for each layer it also
+shows WHAT the layer is for and HOW YOU GET THERE (which Base key reaches it).
+Re-run after editing the keymap and the image regenerates from source.
+
+    python3 scripts/generate_keymap_layout.py            # -> keymap-diagram.png
+    python3 scripts/generate_keymap_layout.py --keymap X --out Y.png
+
+Only dependency is Pillow (pip install pillow).
 """
 
+import argparse
 import re
-import os
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
 
-# Key name mappings for display
-KEY_DISPLAY_NAMES = {
-    # Letters
-    'kp Q': 'Q', 'kp W': 'W', 'kp E': 'E', 'kp R': 'R', 'kp T': 'T',
-    'kp Y': 'Y', 'kp U': 'U', 'kp I': 'I', 'kp O': 'O', 'kp P': 'P',
-    'kp A': 'A', 'kp S': 'S', 'kp D': 'D', 'kp F': 'F', 'kp G': 'G',
-    'kp H': 'H', 'kp J': 'J', 'kp K': 'K', 'kp L': 'L', 'kp SQT': "'",
-    'kp Z': 'Z', 'kp X': 'X', 'kp C': 'C', 'kp V': 'V', 'kp B': 'B',
-    'kp N': 'N', 'kp M': 'M', 'kp COMMA': ',', 'kp DOT': '.', 'kp SLASH': '/',
-    
-    # Numbers
-    'kp N0': '0', 'kp N1': '1', 'kp N2': '2', 'kp N3': '3', 'kp N4': '4',
-    'kp N5': '5', 'kp N6': '6', 'kp N7': '7', 'kp N8': '8', 'kp N9': '9',
-    
-    # Modifiers
-    'kp LCTRL': 'Ctrl', 'kp LSHIFT': 'Shift', 'kp LALT': 'Alt', 'kp LGUI': 'Gui',
-    'kp LSHFT': 'Shift', 'kp RALT': 'RAlt',
-    
-    # Special Keys
-    'kp SPACE': 'Space', 'kp TAB': 'Tab', 'kp RET': 'Enter', 'kp BSPC': 'Bksp',
-    'kp DEL': 'Del', 'kp ESC': 'Esc', 'kp ENTER': 'Enter',
-    'kp LEFT': '←', 'kp RIGHT': '→', 'kp UP': '↑', 'kp DOWN': '↓',
-    'kp HOME': 'Home', 'kp END': 'End', 'kp PG_UP': 'PgUp', 'kp PG_DN': 'PgDn',
-    'kp INS': 'Ins', 'kp CAPS': 'Caps',
-    
-    # Symbols
-    'kp LBKT': '[', 'kp RBKT': ']', 'kp LBRC': '{', 'kp RBRC': '}',
-    'kp SEMI': ';', 'kp COLON': ':', 'kp EQUAL': '=', 'kp PLUS': '+',
-    'kp MINUS': '-', 'kp UNDER': '_', 'kp BSLH': '\\', 'kp PIPE': '|',
-    'kp GRAVE': '`', 'kp TILDE': '~', 'kp AMPS': '&', 'kp ASTRK': '*',
-    'kp LPAR': '(', 'kp RPAR': ')', 'kp DLLR': '$', 'kp PRCNT': '%',
-    'kp CARET': '^', 'kp EXCL': '!', 'kp AT': '@', 'kp HASH': '#',
-    
-    # Function Keys
-    'kp F1': 'F1', 'kp F2': 'F2', 'kp F3': 'F3', 'kp F4': 'F4', 'kp F5': 'F5',
-    'kp F6': 'F6', 'kp F7': 'F7', 'kp F8': 'F8', 'kp F9': 'F9', 'kp F10': 'F10',
-    'kp F11': 'F11', 'kp F12': 'F12',
-    
-    # Media
-    'kp C_PLAY': '▶', 'kp C_PAUSE': '⏸', 'kp C_PP': '⏯', 'kp C_STOP': '⏹',
-    'kp C_NEXT': 'Next', 'kp C_PREV': 'Prev', 'kp C_VOL_UP': 'Vol↑', 'kp C_VOL_DN': 'Vol↓',
-    'kp C_MUTE': 'Mute',
-    
-    # Special markers
-    'none': '∅', '&none': '∅', 'U_UND': 'Undo', 'U_CUT': 'Cut', 'U_CPY': 'Copy',
-    'U_PST': 'Paste', 'U_RDO': 'Redo', 'U_BTN1': 'MB1', 'U_BTN2': 'MB2', 'U_BTN3': 'MB3',
-    'U_MS_U': 'M↑', 'U_MS_D': 'M↓', 'U_MS_L': 'M←', 'U_MS_R': 'M→',
-    'U_WH_U': 'W↑', 'U_WH_D': 'W↓', 'U_WH_L': 'W←', 'U_WH_R': 'W→',
-    
-    # Layers
-    '&tog GAME': 'Game↔', '&bootloader': 'Boot',
-    
-    # Other
-    'kp PSCRN': 'PrtSc', 'kp SLCK': 'SLck', 'kp PAUSE_BREAK': 'Pause',
-    'kp K_APP': 'Menu',
-    
-    # Mod-tap (simplified to show modifier)
-    '&u_mt LGUI': 'G/…', '&u_mt LALT': 'A/…', '&u_mt LCTRL': 'C/…', '&u_mt LSHFT': 'S/…',
-    '&u_mt RALT': 'RA/…',
-    
-    # Layer-tap (simplified to show base key)
-    '&u_lt BUTTON': 'Btn/…', '&u_lt MEDIA': 'Med/…', '&u_lt NAV': 'Nav/…',
-    '&u_lt MOUSE': 'Mou/…', '&u_lt SYM': 'Sym/…', '&u_lt NUM': 'Num/…',
-    '&u_lt FUN': 'Fun/…',
+from PIL import Image, ImageDraw, ImageFont
+
+# ---------------------------------------------------------------------------
+# How a raw binding token becomes a legend. (main label, hold label, kind)
+# kind drives colour: '' plain, 'mod' hold=modifier, 'lt' hold=layer,
+# 'tog' layer switch/toggle, 'boot' bootloader, 'none' unused.
+# ---------------------------------------------------------------------------
+
+# Single-token / macro bindings -> (main, hold, kind)
+MACROS = {
+    "&none": ("", "", "none"),
+    "U_UND": ("UNDO", "", ""), "U_CUT": ("CUT", "", ""), "U_CPY": ("COPY", "", ""),
+    "U_PST": ("PASTE", "", ""), "U_RDO": ("REDO", "", ""),
+    "U_BTN1": ("MB1", "", ""), "U_BTN2": ("MB2", "", ""), "U_BTN3": ("MB3", "", ""),
+    "U_MS_L": ("MS←", "", ""), "U_MS_R": ("MS→", "", ""),
+    "U_MS_U": ("MS↑", "", ""), "U_MS_D": ("MS↓", "", ""),
+    "U_WH_L": ("WH←", "", ""), "U_WH_R": ("WH→", "", ""),
+    "U_WH_U": ("WH↑", "", ""), "U_WH_D": ("WH↓", "", ""),
+    "U_RGB_EFF": ("RGB EF", "", ""), "U_RGB_HUI": ("RGB HU", "", ""),
+    "U_RGB_SAI": ("RGB SA", "", ""), "U_RGB_BRI": ("RGB BR", "", ""),
+    "U_EP_TOG": ("EP TOG", "", ""),
 }
 
-# Corne keyboard layout (42 keys, 6 columns each hand)
-# Position indices: 0-11 (top row), 12-23 (home row), 24-35 (bottom row), 36-41 (thumbs)
-CORNE_LAYOUT = [
-    # Top row (6 keys per hand)
-    [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (5, 0),  # Left
-     (7, 0), (8, 0), (9, 0), (10, 0), (11, 0), (12, 0)],  # Right
-    # Home row
-    [(0, 1), (1, 1), (2, 1), (3, 1), (4, 1), (5, 1),  # Left
-     (7, 1), (8, 1), (9, 1), (10, 1), (11, 1), (12, 1)],  # Right
-    # Bottom row
-    [(0, 2), (1, 2), (2, 2), (3, 2), (4, 2), (5, 2),  # Left
-     (7, 2), (8, 2), (9, 2), (10, 2), (11, 2), (12, 2)],  # Right
-    # Thumb cluster
-    [(2, 3), (3, 3), (4, 3),  # Left
-     (8, 3), (9, 3), (10, 3)],  # Right
-]
+# &kp <CODE> -> label
+KP = {
+    "SQT": "'", "COMMA": ",", "DOT": ".", "SLASH": "/", "SEMI": ";", "COLON": ":",
+    "GRAVE": "`", "TILDE": "~", "BSLH": "\\", "PIPE": "|", "MINUS": "−",
+    "UNDER": "_", "EQUAL": "=", "PLUS": "+", "LBKT": "[", "RBKT": "]",
+    "LBRC": "{", "RBRC": "}", "LPAR": "(", "RPAR": ")", "AMPS": "&", "ASTRK": "*",
+    "DLLR": "$", "PRCNT": "%", "CARET": "^", "EXCL": "!", "AT": "@", "HASH": "#",
+    "SPACE": "SPC", "RET": "RET", "BSPC": "BSP", "DEL": "DEL", "ESC": "ESC",
+    "TAB": "TAB", "CAPS": "CAPS", "INS": "INS", "HOME": "HOME", "END": "END",
+    "PG_UP": "PGUP", "PG_DN": "PGDN", "LEFT": "←", "RIGHT": "→",
+    "UP": "↑", "DOWN": "↓", "PSCRN": "PSCR", "SLCK": "SLCK",
+    "PAUSE_BREAK": "BRK", "K_APP": "APP",
+    "C_PREV": "PREV", "C_NEXT": "NEXT", "C_VOL_DN": "VOL−", "C_VOL_UP": "VOL+",
+    "C_STOP": "STOP", "C_PP": "PLAY", "C_MUTE": "MUTE",
+    "LGUI": "LGUI", "LALT": "LALT", "LCTRL": "LCTRL", "LSHFT": "LSHFT",
+    "RALT": "RALT", "N0": "0", "N1": "1", "N2": "2", "N3": "3", "N4": "4",
+    "N5": "5", "N6": "6", "N7": "7", "N8": "8", "N9": "9",
+}
+for _c in "QWERTYUIOPASDFGHJKLZXCVBNM":
+    KP[_c] = _c
+for _n in range(1, 13):
+    KP[f"F{_n}"] = f"F{_n}"
 
-def simplify_key_name(key: str) -> str:
-    """Convert complex key binding to display name."""
-    key = key.strip().rstrip(',;')
-    
-    # Direct lookup
-    if key in KEY_DISPLAY_NAMES:
-        return KEY_DISPLAY_NAMES[key]
-    
-    # Partial matching for mod-taps and layer-taps
-    for pattern, display in KEY_DISPLAY_NAMES.items():
-        if pattern in key:
-            return display
-    
-    # Extract just the key part if it's a kp command
-    if '&kp ' in key:
-        parts = key.replace('&kp ', '').split()
-        return parts[0] if parts else key
-    
-    # Fallback: return shortened version
-    if len(key) > 12:
-        return key[:10] + '…'
-    return key
+# Home-row mod-tap hold label, per modifier code
+MOD_HOLD = {"LGUI": "LGUI", "LALT": "LALT", "LCTRL": "LCTRL", "LSHFT": "RSHFT",
+            "RALT": "RALT"}
 
-def parse_keymap_file(filepath: str) -> Dict[str, List[str]]:
-    """Parse ZMK keymap file and extract layer definitions."""
+def kp_label(code):
+    return KP.get(code, code)
+
+def render_binding(tok):
+    """tok is the whitespace-joined binding, e.g. '&u_mt LGUI A'. -> (main,hold,kind)"""
+    tok = tok.strip()
+    if tok in MACROS:
+        return MACROS[tok]
+    parts = tok.split()
+    head = parts[0]
+
+    if head == "&kp":
+        return (kp_label(parts[1]), "", "")
+    if head == "&u_mt":            # mod-tap: tap=key, hold=mod
+        mod, key = parts[1], parts[2]
+        return (kp_label(key), MOD_HOLD.get(mod, mod), "mod")
+    if head == "&u_lt":            # layer-tap: tap=key, hold=layer
+        layer, key = parts[1], parts[2]
+        return (kp_label(key), layer, "lt")
+    if head == "&u_boot":          # guarded bootloader (hold 2s)
+        return ("BOOT", "hold 2s", "boot")
+    if head == "&bootloader":
+        return ("BOOT", "", "boot")
+    if head == "&tog":
+        return (f"{parts[1]}⇄", "", "tog")
+    if head == "&to":
+        return (f"→{parts[1]}", "", "tog")
+    if head.startswith("&u_to_U_"):
+        return ("→" + head[len("&u_to_U_"):], "", "tog")
+    if head == "&u_caps_word":
+        return ("CAPS", "", "")
+    if head == "&u_out_tog":
+        return ("OUT", "", "tog")
+    if head.startswith("&u_bt_sel_"):
+        return ("BT " + head[-1], "", "tog")
+    if head == "&ext_power":
+        return ("EXT PW", "", "")
+    if head == "&mkp":
+        return (parts[1], "", "")
+    # Fallback: strip leading & and show it so nothing silently vanishes.
+    return (head.lstrip("&")[:6], "", "")
+
+# ---------------------------------------------------------------------------
+# What each layer is for. Purpose is editorial; "reach" is DERIVED from Base.
+# ---------------------------------------------------------------------------
+PURPOSE = {
+    "base":   "Letters. Home-row mods GACS (hold A/S/D/F = Gui/Alt/Ctrl/Shift).",
+    "game":   "Gaming: left mods off, TAB/SHIFT/CTRL on the outer column, right hand = Base.",
+    "button": "Clipboard (undo/cut/copy/paste/redo) + mouse buttons on the thumbs.",
+    "nav":    "Arrows (vim h/j/k/l), Home/End/PgUp/PgDn, clipboard, caps-word.",
+    "mouse":  "Mouse cursor + wheel; mouse buttons on the thumbs.",
+    "media":  "Volume/transport, Bluetooth profiles, output toggle, enter Game.",
+    "num":    "Number pad and math symbols on the left hand.",
+    "sym":    "Shifted symbols on the left hand.",
+    "fun":    "Function keys F1–F12 and system keys.",
+}
+
+# ---------------------------------------------------------------------------
+# Parse the keymap: layer name -> list of 42 raw binding tokens.
+# Also read the layer #define indices and Base thumbs to compute "reach".
+# ---------------------------------------------------------------------------
+def parse_keymap(path):
+    text = Path(path).read_text()
+
+    # layer index defines: "#define NAV 3"
+    idx = {}
+    for m in re.finditer(r"^#define\s+([A-Z]+)\s+(\d+)\s*$", text, re.M):
+        idx[m.group(1)] = int(m.group(2))
+
     layers = {}
-    current_layer = None
-    bindings = []
-    in_bindings = False
-    
-    with open(filepath, 'r') as f:
-        content = f.read()
-    
-    # Find layer definitions
-    layer_pattern = r'(\w+)\s*{\s*display-name\s*=\s*["\']([^"\']+)["\'];'
-    for match in re.finditer(layer_pattern, content):
-        layer_name = match.group(1)
-        display_name = match.group(2)
-        
-        # Extract bindings for this layer
-        start = match.end()
-        # Find the matching closing brace
-        brace_count = 0
-        end = start
-        for i, char in enumerate(content[start:]):
-            if char == '{':
-                brace_count += 1
-            elif char == '}':
-                if brace_count == 0:
-                    end = start + i
-                    break
-                brace_count -= 1
-        
-        layer_content = content[start:end]
-        
-        # Extract bindings line
-        bindings_match = re.search(r'bindings\s*=\s*<([^>]+)>', layer_content, re.DOTALL)
-        if bindings_match:
-            bindings_text = bindings_match.group(1)
-            # Split by whitespace but keep multi-word keys together
-            keys = re.findall(r'[\w&_\[\]\(\)\.]+|[^\s&\[\]()\.]+', bindings_text)
-            keys = [k.strip() for k in keys if k.strip()]
-            layers[layer_name] = {
-                'display_name': display_name,
-                'keys': keys
-            }
-    
-    return layers
+    order = []
+    # each layer node:  name { display-name = "X"; ... bindings = < ... >; };
+    for m in re.finditer(
+        r'(\w+)\s*\{\s*display-name\s*=\s*"([^"]+)";'
+        r'.*?bindings\s*=\s*<(.*?)>\s*;',
+        text, re.S,
+    ):
+        name, disp, body = m.group(1), m.group(2), m.group(3)
+        # strip /* ... */ comments inside the bindings block
+        body = re.sub(r"/\*.*?\*/", " ", body, flags=re.S)
+        toks = tokenize(body)
+        if len(toks) != 42:
+            print(f"  ! {name}: expected 42 bindings, got {len(toks)}", file=sys.stderr)
+        layers[name] = {"display": disp, "toks": toks}
+        order.append(name)
+    return order, layers, idx
 
-def create_svg_layout(layer_name: str, display_name: str, keys: List[str]) -> str:
-    """Create SVG visualization of a keyboard layer."""
-    # Use first 42 keys (Corne layout)
-    keys = keys[:42]
-    while len(keys) < 42:
-        keys.append('&none')
-    
-    key_width = 40
-    key_height = 40
-    gap = 5
-    left_margin = 20
-    top_margin = 20
-    
-    # Generate SVG
-    svg_lines = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="800" height="300">',
-        '<style>',
-        '.key { fill: #e8e8e8; stroke: #333; stroke-width: 1; }',
-        '.key-text { font-family: monospace; font-size: 10px; text-anchor: middle; dominant-baseline: middle; }',
-        '.layer-title { font-family: sans-serif; font-size: 18px; font-weight: bold; }',
-        '</style>',
-        f'<text class="layer-title" x="10" y="20">{display_name}</text>',
+def tokenize(body):
+    """Split a bindings body into per-key tokens. A token starts at '&' or at a
+    bare Miryoku macro (U_UND, U_BTN1, ...) and runs until the next such start,
+    grouping args like '&u_mt LGUI A' into one token."""
+    words = body.split()
+    toks, cur = [], []
+    for w in words:
+        starts = w.startswith("&") or w in MACROS
+        if starts:
+            if cur:
+                toks.append(" ".join(cur))
+            cur = [w]
+        else:
+            cur.append(w)
+    if cur:
+        toks.append(" ".join(cur))
+    return toks
+
+def base_reach(base_toks, idx):
+    """From Base's 6 thumb bindings, map layer-index -> reaching key label.
+    Base row layout is 12+12+12+6; thumbs are the last 6 tokens."""
+    thumbs = base_toks[36:42]
+    reach = {}
+    for t in thumbs:
+        p = t.split()
+        if p and p[0] == "&u_lt":
+            layer, key = p[1], p[2]
+            reach[layer] = kp_label(key)
+    return reach  # {'MEDIA': 'ESC', 'NAV': 'SPC', ...}
+
+# ---------------------------------------------------------------------------
+# Drawing
+# ---------------------------------------------------------------------------
+THEME = {
+    "bg": (20, 22, 26), "panel": (27, 30, 36),
+    "key": (38, 42, 51), "key_edge": (13, 15, 18),
+    "none": (32, 35, 42), "none_ink": (74, 78, 86),
+    "ink": (231, 230, 225), "soft": (146, 151, 161), "faint": (103, 108, 117),
+    "mod": (110, 168, 222), "lt": (79, 199, 184), "tog": (177, 137, 230),
+    "accent": (232, 163, 61),
+}
+
+def load_font(size, bold=False):
+    candidates = [
+        "/home/marc/.local/share/fonts/JetBrainsMonoNerd/JetBrainsMonoNerdFontMono-Regular.ttf",
+        "/usr/share/fonts/jetbrains-mono-fonts/JetBrainsMono-Regular.ttf",
+        "/usr/share/fonts/dejavu-sans-mono-fonts/DejaVuSansMono.ttf",
+        "/usr/share/fonts/dejavu/DejaVuSansMono.ttf",
     ]
-    
-    # Draw keys in grid layout
-    key_index = 0
-    for row_idx, row in enumerate(CORNE_LAYOUT):
-        for col_idx, (x_grid, y_grid) in enumerate(row):
-            if key_index >= len(keys):
-                break
-            
-            key = keys[key_index]
-            display = simplify_key_name(key)
-            
-            x = left_margin + x_grid * (key_width + gap)
-            y = top_margin + 40 + y_grid * (key_height + gap)
-            
-            # Color coding for different key types
-            fill_color = '#e8e8e8'
-            if '&none' in key or 'none' == key:
-                fill_color = '#f0f0f0'
-            elif any(x in key for x in ['SHIFT', 'CTRL', 'ALT', 'GUI', 'LSHFT']):
-                fill_color = '#ffcccc'
-            elif any(x in key for x in ['&u_lt', 'layer']):
-                fill_color = '#ccddff'
-            
-            svg_lines.append(f'<rect class="key" x="{x}" y="{y}" width="{key_width}" height="{key_height}" fill="{fill_color}"/>')
-            
-            # Wrap text if too long
-            if len(display) > 8:
-                parts = display.split('/')
-                for i, part in enumerate(parts[:2]):
-                    text_y = y + 12 + (i - 0.5) * 12
-                    svg_lines.append(f'<text class="key-text" x="{x + key_width//2}" y="{text_y}">{part}</text>')
-            else:
-                svg_lines.append(f'<text class="key-text" x="{x + key_width//2}" y="{y + key_height//2}">{display}</text>')
-            
-            key_index += 1
-    
-    svg_lines.append('</svg>')
-    return '\n'.join(svg_lines)
+    for c in candidates:
+        if Path(c).exists():
+            return ImageFont.truetype(c, size)
+    return ImageFont.load_default()
+
+KEY = 58        # key cell size
+GAP = 6
+HALF_GAP = 34   # gap between the two hands
+PAD = 34        # page padding
+HDR = 62        # per-layer header height
+
+def key_color(kind):
+    return {
+        "mod": THEME["mod"], "lt": THEME["lt"], "tog": THEME["tog"],
+        "boot": THEME["accent"],
+    }.get(kind)
+
+def draw_key(d, x, y, binding, f_main, f_hold):
+    main, hold, kind = binding
+    if kind == "none" or (not main and not hold):
+        d.rounded_rectangle([x, y, x + KEY, y + KEY], radius=8, fill=THEME["none"])
+        d.text((x + KEY / 2, y + KEY / 2), "·", font=f_main,
+               fill=THEME["none_ink"], anchor="mm")
+        return
+    edge = THEME["accent"] if kind == "boot" else THEME["key_edge"]
+    fill = THEME["key"]
+    if kind == "boot":
+        fill = (54, 46, 34)
+    d.rounded_rectangle([x, y, x + KEY, y + KEY], radius=8, fill=fill,
+                        outline=edge, width=2 if kind == "boot" else 1)
+    main_fill = THEME["accent"] if kind == "boot" else THEME["ink"]
+    if hold:
+        d.text((x + KEY / 2, y + KEY * 0.36), main, font=f_main, fill=main_fill, anchor="mm")
+        hc = key_color(kind) or THEME["soft"]
+        d.text((x + KEY / 2, y + KEY * 0.72), hold, font=f_hold, fill=hc, anchor="mm")
+    else:
+        d.text((x + KEY / 2, y + KEY / 2), main, font=f_main, fill=main_fill, anchor="mm")
+
+def board_width():
+    return 6 * (KEY + GAP) + HALF_GAP + 6 * (KEY + GAP) - GAP
+
+def draw_layer(d, x0, y0, layer, reach, idx, fonts):
+    f_name, f_meta, f_main, f_hold, f_small = fonts
+    disp = layer["display"]
+    key = disp.lower()
+
+    # header: name + purpose + how to reach
+    d.text((x0, y0), disp, font=f_name, fill=THEME["ink"])
+    name_h = f_name.getbbox("Ag")[3]
+    purpose = PURPOSE.get(key, "")
+    if purpose:
+        d.text((x0, y0 + name_h + 6), purpose, font=f_meta, fill=THEME["soft"])
+
+    # reach line (right-aligned under header)
+    lname = disp.upper()
+    r = None
+    for k, v in reach.items():
+        if k == lname:
+            r = v
+    if r:
+        txt = f"reach: hold  {r}  (thumb)"
+    elif key == "base":
+        txt = "default layer"
+    elif key == "game":
+        txt = "reach: Media → GAME⇄  (tap to toggle)"
+    else:
+        txt = ""
+    if txt:
+        w = d.textlength(txt, font=f_meta)
+        d.text((x0 + board_width() - w, y0), txt, font=f_meta, fill=THEME["accent"])
+
+    # keys: rows 0-2 are 12 wide, thumb row is 6 (inner three cols each hand)
+    toks = layer["toks"]
+    gy = y0 + HDR
+    for row in range(3):
+        for col in range(12):
+            t = toks[row * 12 + col]
+            x = x0 + col * (KEY + GAP) + (HALF_GAP if col >= 6 else 0)
+            draw_key(d, x, gy, render_binding(t), f_main, f_hold)
+        gy += KEY + GAP
+    # thumbs: positions 36..41 -> under cols 3,4,5 (left) and 6,7,8 (right)
+    thumb_cols = [3, 4, 5, 6, 7, 8]
+    for i, col in enumerate(thumb_cols):
+        t = toks[36 + i]
+        x = x0 + col * (KEY + GAP) + (HALF_GAP if col >= 6 else 0)
+        draw_key(d, x, gy, render_binding(t), f_main, f_hold)
+    return gy + KEY
 
 def main():
-    keymap_file = 'config/corne_custom.keymap'
-    output_dir = 'keymap_layouts'
-    
-    if not os.path.exists(keymap_file):
-        print(f"Error: {keymap_file} not found")
-        sys.exit(1)
-    
-    # Create output directory
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Parse keymap
-    print(f"Parsing {keymap_file}...")
-    layers = parse_keymap_file(keymap_file)
-    
-    if not layers:
-        print("No layers found in keymap file")
-        sys.exit(1)
-    
-    print(f"Found {len(layers)} layers")
-    
-    # Generate SVG for each layer
-    for layer_name, layer_data in layers.items():
-        display_name = layer_data['display_name']
-        keys = layer_data['keys']
-        
-        svg_content = create_svg_layout(layer_name, display_name, keys)
-        output_file = os.path.join(output_dir, f'{display_name.lower()}.svg')
-        
-        with open(output_file, 'w') as f:
-            f.write(svg_content)
-        
-        print(f"  Generated {output_file}")
-    
-    # Create index HTML
-    html_content = '''<!DOCTYPE html>
-<html>
-<head>
-    <title>ZMK Keymap Layers</title>
-    <style>
-        body { font-family: sans-serif; margin: 20px; background: #f5f5f5; }
-        h1 { color: #333; }
-        .layer { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .layer h2 { margin-top: 0; color: #0066cc; }
-        svg { max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; }
-    </style>
-</head>
-<body>
-    <h1>ZMK Corne Custom - Keymap Layers</h1>
-    <p>Visual layout of all keyboard layers. Each layer shows key bindings.</p>
-'''
-    
-    for layer_name in sorted(layers.keys(), key=lambda x: layers[x]['display_name']):
-        display_name = layers[layer_name]['display_name']
-        svg_file = f'{display_name.lower()}.svg'
-        html_content += f'''    <div class="layer">
-        <h2>{display_name}</h2>
-        <img src="{svg_file}" alt="{display_name}">
-    </div>
-'''
-    
-    html_content += '''</body>
-</html>'''
-    
-    index_file = os.path.join(output_dir, 'index.html')
-    with open(index_file, 'w') as f:
-        f.write(html_content)
-    print(f"Generated {index_file}")
-    
-    print("\nDone!")
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--keymap", default="config/corne_custom.keymap")
+    ap.add_argument("--out", default="keymap-diagram.png")
+    ap.add_argument("--scale", type=int, default=2, help="supersample factor")
+    args = ap.parse_args()
 
-if __name__ == '__main__':
+    if not Path(args.keymap).exists():
+        sys.exit(f"keymap not found: {args.keymap}")
+
+    order, layers, idx = parse_keymap(args.keymap)
+    if not layers:
+        sys.exit("no layers parsed")
+    print(f"parsed {len(layers)} layers: {', '.join(order)}")
+
+    reach = base_reach(layers[order[0]]["toks"], idx) if order else {}
+
+    s = args.scale
+    global KEY, GAP, HALF_GAP, PAD, HDR
+    KEY, GAP, HALF_GAP, PAD, HDR = (v * s for v in (KEY, GAP, HALF_GAP, PAD, HDR))
+
+    fonts = (load_font(22 * s), load_font(12 * s), load_font(13 * s),
+             load_font(8 * s), load_font(10 * s))
+
+    bw = board_width()
+    layer_h = HDR + 4 * (KEY + GAP) + 26 * s
+    width = bw + 2 * PAD
+    top = PAD + 96 * s   # room for title + legend
+    height = top + len(order) * layer_h + PAD
+
+    img = Image.new("RGB", (int(width), int(height)), THEME["bg"])
+    d = ImageDraw.Draw(img)
+
+    # title
+    d.text((PAD, PAD), "Miryoku Keymap  —  6-col Corne", font=load_font(26 * s),
+           fill=THEME["ink"])
+    d.text((PAD, PAD + 34 * s),
+           "Small line under a key = what HOLD does.  Amber = bootloader (hold 2s to flash).",
+           font=fonts[1], fill=THEME["soft"])
+    # legend
+    lx, ly = PAD, PAD + 66 * s
+    for label, col in [("hold=mod", THEME["mod"]), ("hold=layer", THEME["lt"]),
+                       ("layer switch", THEME["tog"]), ("bootloader", THEME["accent"]),
+                       ("unused", THEME["none_ink"])]:
+        d.rounded_rectangle([lx, ly, lx + 13 * s, ly + 13 * s], radius=3 * s, fill=col)
+        d.text((lx + 18 * s, ly + 6 * s), label, font=fonts[4], fill=THEME["soft"],
+               anchor="lm")
+        lx += int(d.textlength(label, font=fonts[4])) + 44 * s
+
+    y = top
+    for name in order:
+        y = draw_layer(d, PAD, y, layers[name], reach, idx, fonts) + 26 * s
+
+    img.save(args.out)
+    print(f"wrote {args.out}  ({img.width}x{img.height})")
+
+if __name__ == "__main__":
     main()
