@@ -35,9 +35,6 @@ MACROS = {
     "U_MS_U": ("MS↑", "", ""), "U_MS_D": ("MS↓", "", ""),
     "U_WH_L": ("WH←", "", ""), "U_WH_R": ("WH→", "", ""),
     "U_WH_U": ("WH↑", "", ""), "U_WH_D": ("WH↓", "", ""),
-    "U_RGB_EFF": ("RGB EF", "", ""), "U_RGB_HUI": ("RGB HU", "", ""),
-    "U_RGB_SAI": ("RGB SA", "", ""), "U_RGB_BRI": ("RGB BR", "", ""),
-    "U_EP_TOG": ("EP TOG", "", ""),
 }
 
 # &kp <CODE> -> label
@@ -266,7 +263,7 @@ def draw_layer(d, x0, y0, layer, reach, idx, fonts):
     elif key == "base":
         txt = "default layer"
     elif key == "game":
-        txt = "reach: Media → GAME⇄  (double-tap to toggle)"
+        txt = "reach: double-tap →GAME (next to →BASE on any layer)"
     else:
         txt = ""
     if txt:

@@ -26,8 +26,6 @@
 #include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/bt.h>
 #include <dt-bindings/zmk/outputs.h>
-#include <dt-bindings/zmk/ext_power.h>
-#include <dt-bindings/zmk/rgb.h>
 #include <dt-bindings/zmk/pointing.h>
 
 /* ---- layer indices ---- */
@@ -60,13 +58,7 @@
 #define U_WH_D &msc SCRL_DOWN
 #define U_WH_L &msc SCRL_LEFT
 #define U_WH_R &msc SCRL_RIGHT
-/* RGB / ext-power (no-ops on this board: no underglow wired, but stock-faithful) */
-#define U_RGB_TOG &rgb_ug RGB_TOG
-#define U_RGB_EFF &rgb_ug RGB_EFF
-#define U_RGB_HUI &rgb_ug RGB_HUI
-#define U_RGB_SAI &rgb_ug RGB_SAI
-#define U_RGB_BRI &rgb_ug RGB_BRI
-#define U_EP_TOG &ext_power EP_TOG
+/* RGB / ext-power macros dropped: this board has no underglow wired. */
 
 /* mouse accel tuning (miryoku_mousekeys.dtsi) */
 #define U_MOUSE_MOVE_EXPONENT 1
@@ -159,8 +151,8 @@
 			 * Letters stay in their BASE typing positions (no shift). Left
 			 * home-row mods removed (plain &kp). The free LEFT outer column
 			 * carries TAB/LSHFT/LCTRL. Left thumbs plain. Right hand + right
-			 * thumbs keep full Miryoku so layer access (and &tog GAME to exit)
-			 * still works.
+			 * thumbs keep full Miryoku, so to leave Game hold a right thumb
+			 * (e.g. BSPC -> Num) then double-tap the -> BASE key.
 			 */
 			bindings = <
 &kp TAB    &kp Q  &kp W  &kp E    &kp R      &kp T          &kp Y  &kp U          &kp I          &kp O          &kp P               &none
@@ -183,8 +175,8 @@
 		nav {
 			display-name = "Nav";
 			bindings = <
-&none  &u_boot 0 0  &none       &none          &u_to_U_BASE  &none        U_RDO      U_PST      U_CPY      U_CUT      U_UND         &none
-&none  &kp LGUI     &kp LALT    &kp LCTRL      &kp LSHFT     &none        &kp LEFT   &kp DOWN   &kp UP     &kp RIGHT  &u_caps_word  &none
+&none  &u_boot 0 0  &none       &none          &u_to_U_BASE  &u_to_U_GAME  U_RDO      U_PST      U_CPY      U_CUT      U_UND         &none
+&none  &kp LGUI     &kp LALT    &kp LCTRL      &kp LSHFT     &none         &kp LEFT   &kp DOWN   &kp UP     &kp RIGHT  &u_caps_word  &none
 &none  &none        &kp RALT    &u_to_U_NUM    &u_to_U_NAV   &none        &kp HOME   &kp PG_DN  &kp PG_UP  &kp END    &kp INS       &none
                                 &none          &none         &none        &kp RET    &kp BSPC   &kp DEL
 			>;
@@ -193,7 +185,7 @@
 		mouse {
 			display-name = "Mouse";
 			bindings = <
-&none  &u_boot 0 0  &none       &none         &u_to_U_BASE   &none        U_RDO   U_PST   U_CPY   U_CUT   U_UND    &none
+&none  &u_boot 0 0  &none       &none         &u_to_U_BASE   &u_to_U_GAME  U_RDO   U_PST   U_CPY   U_CUT   U_UND    &none
 &none  &kp LGUI     &kp LALT    &kp LCTRL     &kp LSHFT      &none        U_MS_L  U_MS_D  U_MS_U  U_MS_R  &none    &none
 &none  &none        &kp RALT    &u_to_U_SYM   &u_to_U_MOUSE  &none        U_WH_L  U_WH_D  U_WH_U  U_WH_R  &none    &none
                                 &none         &none          &none        U_BTN2  U_BTN1  U_BTN3
@@ -203,22 +195,25 @@
 		media {
 			display-name = "Media";
 			/*
-			 * Fork MEDIA, with two changes: volume laid vim-vertical (VOL_DN
-			 * on the DOWN column, VOL_UP on the UP column, matching NAV's j/k),
-			 * and &tog GAME on the free left-middle U_NA slot to enter/leave Game.
+			 * Fork MEDIA, with tweaks: volume laid vim-vertical (VOL_DN on the
+			 * DOWN column, VOL_UP on the UP column, matching NAV's j/k), and
+			 * &u_to_U_GAME next to &u_to_U_BASE (double-tap to switch to Game,
+			 * like every other layer). RGB / ext-power keys removed — this board
+			 * has no underglow wired and CONFIG_ZMK_RGB_UNDERGLOW is off, so they
+			 * were dead keys.
 			 */
 			bindings = <
-&none  &u_boot 0 0  &studio_unlock &none        &u_to_U_BASE   &none        U_RGB_EFF     U_RGB_HUI     U_RGB_SAI     U_RGB_BRI     &ext_power EP_TOG  &none
-&none  &kp LGUI     &kp LALT      &kp LCTRL     &kp LSHFT      &none        &kp C_PREV    &kp C_VOL_DN  &kp C_VOL_UP  &kp C_NEXT    U_EP_TOG          &none
-&none  &tog GAME    &kp RALT      &u_to_U_FUN   &u_to_U_MEDIA  &none        &u_bt_sel_0   &u_bt_sel_1   &u_bt_sel_2   &u_bt_sel_3   &u_out_tog        &none
-                                  &none         &none          &none        &kp C_STOP    &kp C_PP      &kp C_MUTE
+&none  &u_boot 0 0  &studio_unlock &none        &u_to_U_BASE   &u_to_U_GAME  &none         &none         &none         &none         &none       &none
+&none  &kp LGUI     &kp LALT      &kp LCTRL     &kp LSHFT      &none         &kp C_PREV    &kp C_VOL_DN  &kp C_VOL_UP  &kp C_NEXT    &none       &none
+&none  &none        &kp RALT      &u_to_U_FUN   &u_to_U_MEDIA  &none         &u_bt_sel_0   &u_bt_sel_1   &u_bt_sel_2   &u_bt_sel_3   &u_out_tog  &none
+                                  &none         &none          &none         &kp C_STOP    &kp C_PP      &kp C_MUTE
 			>;
 		};
 
 		num {
 			display-name = "Num";
 			bindings = <
-&none  &kp LBKT   &kp N7   &kp N8   &kp N9   &kp RBKT      &none  &u_to_U_BASE  &none        &none        &u_boot 0 0  &none
+&none  &kp LBKT   &kp N7   &kp N8   &kp N9   &kp RBKT      &none  &u_to_U_BASE  &u_to_U_GAME  &none        &u_boot 0 0  &none
 &none  &kp SEMI   &kp N4   &kp N5   &kp N6   &kp EQUAL     &none  &kp LSHFT     &kp LCTRL    &kp LALT     &kp LGUI     &none
 &none  &kp GRAVE  &kp N1   &kp N2   &kp N3   &kp BSLH      &none  &u_to_U_NUM   &u_to_U_NAV  &kp RALT     &none        &none
                            &kp DOT  &kp N0   &kp MINUS     &none  &none         &none
@@ -228,7 +223,7 @@
 		sym {
 			display-name = "Sym";
 			bindings = <
-&none  &kp LBRC   &kp AMPS  &kp ASTRK  &kp LPAR  &kp RBRC      &none  &u_to_U_BASE  &none          &none      &u_boot 0 0  &none
+&none  &kp LBRC   &kp AMPS  &kp ASTRK  &kp LPAR  &kp RBRC      &none  &u_to_U_BASE  &u_to_U_GAME   &none      &u_boot 0 0  &none
 &none  &kp COLON  &kp DLLR  &kp PRCNT  &kp CARET &kp PLUS      &none  &kp LSHFT     &kp LCTRL      &kp LALT   &kp LGUI     &none
 &none  &kp TILDE  &kp EXCL  &kp AT     &kp HASH  &kp PIPE      &none  &u_to_U_SYM   &u_to_U_MOUSE  &kp RALT   &none        &none
                             &kp LPAR   &kp RPAR  &kp UNDER     &none  &none         &none
@@ -238,7 +233,7 @@
 		fun {
 			display-name = "Fun";
 			bindings = <
-&none  &kp F12  &kp F7  &kp F8  &kp F9  &kp PSCRN         &none  &u_to_U_BASE  &none          &none      &u_boot 0 0  &none
+&none  &kp F12  &kp F7  &kp F8  &kp F9  &kp PSCRN         &none  &u_to_U_BASE  &u_to_U_GAME   &none      &u_boot 0 0  &none
 &none  &kp F11  &kp F4  &kp F5  &kp F6  &kp SLCK          &none  &kp LSHFT     &kp LCTRL      &kp LALT   &kp LGUI     &none
 &none  &kp F10  &kp F1  &kp F2  &kp F3  &kp PAUSE_BREAK   &none  &u_to_U_FUN   &u_to_U_MEDIA  &kp RALT   &none        &none
                         &kp K_APP  &kp SPACE  &kp TAB     &none  &none         &none

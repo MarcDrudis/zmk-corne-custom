@@ -30,7 +30,7 @@ python3 scripts/generate_keymap_layout.py    # needs Pillow; writes keymap-diagr
 | # | Layer  | For | Reach (hold from Base) |
 |---|--------|-----|------------------------|
 | 0 | Base   | Letters, home-row mods GACS | default |
-| 1 | Game   | Left mods off, TAB/SHIFT/CTRL on outer column | Media, double-tap `GAME⇄` |
+| 1 | Game   | Left mods off, TAB/SHIFT/CTRL on outer column | double-tap `→GAME` (next to `→BASE`) |
 | 2 | Button | Clipboard + mouse buttons | hold `Z` or `/` |
 | 3 | Nav    | Arrows (vim h/j/k/l), Home/End/PgUp/PgDn | hold `SPC` |
 | 4 | Mouse  | Mouse cursor + wheel | hold `TAB` |
