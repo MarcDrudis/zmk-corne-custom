@@ -175,16 +175,16 @@ def tokenize(body):
     return toks
 
 def base_reach(base_toks, idx):
-    """From Base's 6 thumb bindings, map layer-index -> reaching key label.
-    Base row layout is 12+12+12+6; thumbs are the last 6 tokens."""
-    thumbs = base_toks[36:42]
+    """From every Base &u_lt binding (thumbs AND home keys like Z/SLASH),
+    map layer name -> list of keys that reach it by hold. e.g.
+    {'MEDIA': ['ESC'], 'BUTTON': ['Z', '/']}."""
     reach = {}
-    for t in thumbs:
+    for t in base_toks:
         p = t.split()
         if p and p[0] == "&u_lt":
             layer, key = p[1], p[2]
-            reach[layer] = kp_label(key)
-    return reach  # {'MEDIA': 'ESC', 'NAV': 'SPC', ...}
+            reach.setdefault(layer, []).append(kp_label(key))
+    return reach
 
 # ---------------------------------------------------------------------------
 # Drawing
@@ -260,16 +260,13 @@ def draw_layer(d, x0, y0, layer, reach, idx, fonts):
 
     # reach line (right-aligned under header)
     lname = disp.upper()
-    r = None
-    for k, v in reach.items():
-        if k == lname:
-            r = v
-    if r:
-        txt = f"reach: hold  {r}  (thumb)"
+    keys = reach.get(lname)
+    if keys:
+        txt = f"reach: hold  {'  or  '.join(keys)}"
     elif key == "base":
         txt = "default layer"
     elif key == "game":
-        txt = "reach: Media → GAME⇄  (tap to toggle)"
+        txt = "reach: Media → GAME⇄  (double-tap to toggle)"
     else:
         txt = ""
     if txt:
@@ -320,7 +317,7 @@ def main():
     bw = board_width()
     layer_h = HDR + 4 * (KEY + GAP) + 26 * s
     width = bw + 2 * PAD
-    top = PAD + 96 * s   # room for title + legend
+    top = PAD + 116 * s   # room for title + two caption lines + legend
     height = top + len(order) * layer_h + PAD
 
     img = Image.new("RGB", (int(width), int(height)), THEME["bg"])
@@ -332,8 +329,12 @@ def main():
     d.text((PAD, PAD + 34 * s),
            "Small line under a key = what HOLD does.  Amber = bootloader (hold 2s to flash).",
            font=fonts[1], fill=THEME["soft"])
+    d.text((PAD, PAD + 52 * s),
+           "→X = double-tap to switch to layer X (a stray single tap does nothing).  "
+           "X⇄ = tap to toggle layer X on/off.",
+           font=fonts[1], fill=THEME["soft"])
     # legend
-    lx, ly = PAD, PAD + 66 * s
+    lx, ly = PAD, PAD + 84 * s
     for label, col in [("hold=mod", THEME["mod"]), ("hold=layer", THEME["lt"]),
                        ("layer switch", THEME["tog"]), ("bootloader", THEME["accent"]),
                        ("unused", THEME["none_ink"])]:

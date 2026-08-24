@@ -8,9 +8,16 @@ layout on [ZMK](https://zmk.dev), QWERTY with home-row mods.
 ![Keymap layout](keymap-diagram.png)
 
 The diagram is generated straight from [`config/corne_custom.keymap`](config/corne_custom.keymap).
-Each layer shows what it's for and which thumb reaches it; the small line under a
+Each layer shows what it's for and which key reaches it; the small line under a
 key is what **hold** does (blue = modifier, teal = layer). Amber keys enter the
 bootloader (hold 2 s).
+
+Two symbols show up inside layers:
+
+- **`→X`** — a double-tap-guarded switch: tap once and nothing happens, tap again
+  to switch to layer X. The guard stops a stray single tap from changing layers.
+- **`X⇄`** — tap once to toggle layer X on, tap again to toggle it off (used to
+  enter/leave the Game layer).
 
 Regenerate after editing the keymap:
 
@@ -23,7 +30,7 @@ python3 scripts/generate_keymap_layout.py    # needs Pillow; writes keymap-diagr
 | # | Layer  | For | Reach (hold from Base) |
 |---|--------|-----|------------------------|
 | 0 | Base   | Letters, home-row mods GACS | default |
-| 1 | Game   | Left mods off, TAB/SHIFT/CTRL on outer column | Media → `GAME⇄` |
+| 1 | Game   | Left mods off, TAB/SHIFT/CTRL on outer column | Media, double-tap `GAME⇄` |
 | 2 | Button | Clipboard + mouse buttons | hold `Z` or `/` |
 | 3 | Nav    | Arrows (vim h/j/k/l), Home/End/PgUp/PgDn | hold `SPC` |
 | 4 | Mouse  | Mouse cursor + wheel | hold `TAB` |
