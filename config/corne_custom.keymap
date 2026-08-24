@@ -208,7 +208,7 @@
 			 * and &tog GAME on the free left-middle U_NA slot to enter/leave Game.
 			 */
 			bindings = <
-&none  &u_boot 0 0  &none         &none         &u_to_U_BASE   &none        U_RGB_EFF     U_RGB_HUI     U_RGB_SAI     U_RGB_BRI     &ext_power EP_TOG  &none
+&none  &u_boot 0 0  &studio_unlock &none        &u_to_U_BASE   &none        U_RGB_EFF     U_RGB_HUI     U_RGB_SAI     U_RGB_BRI     &ext_power EP_TOG  &none
 &none  &kp LGUI     &kp LALT      &kp LCTRL     &kp LSHFT      &none        &kp C_PREV    &kp C_VOL_DN  &kp C_VOL_UP  &kp C_NEXT    U_EP_TOG          &none
 &none  &tog GAME    &kp RALT      &u_to_U_FUN   &u_to_U_MEDIA  &none        &u_bt_sel_0   &u_bt_sel_1   &u_bt_sel_2   &u_bt_sel_3   &u_out_tog        &none
                                   &none         &none          &none        &kp C_STOP    &kp C_PP      &kp C_MUTE
