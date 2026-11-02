@@ -9,3 +9,11 @@ include:
     cmake-args: -DCONFIG_ZMK_STUDIO=y
   - board: nice_nano_v2
     shield: corne_custom_right
+  # Typeractive Corne: nice!nano v2 + nice!view. Same keymap; right-half
+  # screen art comes from display/ (this repo is a Zephyr module).
+  - board: nice_nano_v2
+    shield: corne_left nice_view_adapter nice_view
+    snippet: studio-rpc-usb-uart
+    cmake-args: -DCONFIG_ZMK_STUDIO=y
+  - board: nice_nano_v2
+    shield: corne_right nice_view_adapter nice_view

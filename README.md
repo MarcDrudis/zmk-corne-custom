@@ -45,3 +45,14 @@ Firmware builds in GitHub Actions on every push; the `.uf2` files land in
 [`firmware/firmware/`](firmware/firmware/). To flash: double-tap reset (or hold
 an amber bootloader key 2 s) to mount the drive, then drag the matching `.uf2`
 onto it. Flash **both halves**.
+
+## Typeractive Corne (nice!view)
+
+The same keymap also builds for a stock Corne (`corne_left/right` +
+`nice_view_adapter nice_view`): [`config/corne.keymap`](config/corne.keymap)
+just includes the hand-wired one. The left screen is the stock nice!view
+status; the right screen shows custom art from [`display/art.c`](display/art.c)
+(a 140×68 1-bit LVGL image; regenerate with the LVGL v8 image converter,
+format *Indexed 1 bit*, and keep the `qiskitcat` name or update
+[`display/peripheral_status.c`](display/peripheral_status.c)). The cat gets
+sleepier as the right half's battery drains: one more Z below 50 %, 25 % and 10 %.

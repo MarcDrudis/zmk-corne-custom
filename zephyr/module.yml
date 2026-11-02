@@ -1,0 +1,6 @@
+# Makes this repo a Zephyr module so display/ (custom nice!view art) gets
+# compiled. ZMK's build-user-config picks this file up automatically.
+name: zmk-corne-custom
+build:
+  cmake: display
+  kconfig: display/Kconfig

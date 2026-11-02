@@ -1,0 +1,5 @@
+/*
+ * Typeractive Corne (stock ZMK `corne` shield, 6-col / 42 keys) uses the same
+ * keymap as the hand-wired board: both share the 42-position Corne layout.
+ */
+#include "corne_custom.keymap"
